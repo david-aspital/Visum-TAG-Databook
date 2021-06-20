@@ -179,35 +179,76 @@ def a1_3_2(db_path):
 def a1_3_3(db_path):
     name = 'A1.3.3'
     comment = 'Car occupancies per Vehicle Kilometre Travelled and per Trip by Journey Purpose'
-    header_cells = pd.read_excel(db_path, sheet_name=name, skiprows=22, usecols='A,D:J', nrows=1, header=None, engine='openpyxl').fillna("")
+    header_cells = pd.read_excel(db_path, sheet_name=name, skiprows=24, usecols='A,D:J', nrows=1, header=None, engine='openpyxl').fillna("")
     header = []
     for col in list(header_cells.columns.values):
         header.append(header_cells[col].str.cat(sep = " "))
     header = [x.strip() for x in header]
     header[0] = 'Journey Purpose'
-    #! Check all this
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=25, usecols='A,D:J', nrows=4, header=None, names=header, engine='openpyxl') #! Check nrows here
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='A,D:J', nrows=4, header=None, names=header, engine='openpyxl')
     df = df.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per VehKm')
-    rows = [x for x in range(30) if x not in range(24, 29)]
-    df2 = pd.read_excel(db_path, sheet_name=name, skiprows= lambda x: x in rows, usecols='A,D:J', nrows=6, header=[0,1], engine='openpyxl') #! Check nrows here
-    df2.columns = [f'{i} {j}' if j != '' or j != 'Occupancy per trip' else f'{i}' for i,j in df.columns]
-    df2 = df.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per Trip')
+    df2 = pd.read_excel(db_path, sheet_name=name, skiprows=31, usecols='A,D:J', nrows=4, header=None, names=header, engine='openpyxl')
+    df2 = df2.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per Trip')
     df3 = df.merge(df2)
     create_fill_udt(df3, f'{name}a', comment)
 
-    #! Rest of the occupancies 
+    comment = 'Vehicle occupancies per Vehicle Kilometre Travelled'
+    header_cells = pd.read_excel(db_path, sheet_name=name, skiprows=36, usecols='A,B,H:J', nrows=1, header=None, engine='openpyxl').fillna("")
+    header = []
+    for col in list(header_cells.columns.values):
+        header.append(header_cells[col].str.cat(sep = " "))
+    header = [x.strip() for x in header]
+    header[0] = 'Vehicle Type'
+    header[1] = 'Journey Purpose'
+    header[2] = 'Average '+header[2]
+    for i in range(3,5):
+        header[i] = header[i]+' Average'
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=39, usecols='A,B,H:J', nrows=7, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df = df.melt(id_vars='Journey Purpose', value_vars=['Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per VehKm')
+    create_fill_udt(df, f'{name}b', comment)
+
+    comment = 'Annual Percentage Change in Car Passenger Occupancy (% pa) up to 2036'
+    header_cells = pd.read_excel(db_path, sheet_name=name, skiprows=48, usecols='A,D:J', nrows=1, header=None, engine='openpyxl').fillna("")
+    header = []
+    for col in list(header_cells.columns.values):
+        header.append(header_cells[col].str.cat(sep = " "))
+    header = [x.strip() for x in header]
+    header[0] = 'Journey Purpose'
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=49, usecols='A,D:J', nrows=2, header=None, names=header, engine='openpyxl')
+    df = df.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average', 'Weekend', 'All Week'], var_name='Time Period', value_name='Change in Car Passenger Occupancy')
+    create_fill_udt(df, f'{name}c', comment)
+
+def a1_3_4(db_path):
+    name = 'A1.3.4'
+    comment = ' Proportion of travel in work and non-work time'
+    header_cells = pd.read_excel(db_path, sheet_name=name, skiprows=24, usecols='A,B,D:J', nrows=1, header=None, engine='openpyxl').fillna("")
+    header = []
+    for col in list(header_cells.columns.values):
+        header.append(header_cells[col].str.cat(sep = " "))
+    header = [x.strip() for x in header]
+    header[0] = 'Mode'
+    header[1] = 'Journey Purpose'
+    header[6] = 'Weekday Average'
+    header[7] = 'Weekend Average'
+    header[8] = 'All Week Average'
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='A,D:J', nrows=7, header=None, names=header, engine='openpyxl', index_cols=[0,1]).reset_index()
+    df = df.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per VehKm')
+    df2 = pd.read_excel(db_path, sheet_name=name, skiprows=31, usecols='A,D:J', nrows=4, header=None, names=header, engine='openpyxl')
+    df2 = df2.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per Trip')
+    df3 = df.merge(df2)
+    create_fill_udt(df3, f'{name}a', comment)
 
 
 
 
 if __name__ == '__main__':
     app = wx.App()
-    wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" \
-         "All files (*.*)|*.*"
+    wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
     db_path = file_select_dlg("Please select TAG Databook file...", wildcard)
     #a1_1_1(db_path)
     #a_1_3_1(db_path)
     #a1_3_2(db_path)
-    a1_3_3(db_path)
+    #a1_3_3(db_path)
+    a1_3_4(db_path)
 
     print(db_path)
