@@ -384,6 +384,43 @@ def a1_3_14(db_path):
     df = df[['Vehicle Type', 'Trip Purpose', 'Fuel Type', 'Param_a1', 'Param_b1']]
     create_fill_udt(df, f'{name}', comment)
 
+def a1_3_15(db_path):
+    name = 'A1.3.15'
+    comment = 'Forecast non-fuel resource vehicle operating costs'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=36, skiprows=25, header=None, usecols='B,D:I', engine='openpyxl')
+    headers = ['Year', 'Work;Car;Param_a1', 'Work;Car;Param_b1','Non-work;Car;Param_a1','Non-work;Car;Param_b1','Average;Car;Param_a1', 'Average;Car;Param_b1']
+    df.columns = headers
+    df = df.melt(id_vars='Year', var_name='Variables', value_name='Value')
+    df[['Trip Purpose', 'Vehicle Type', 'Parameter']] = df['Variables'].str.split(';', expand=True)
+    df = df.pivot_table(values='Value', index=['Year', 'Trip Purpose', 'Vehicle Type'], columns='Parameter').reset_index().sort_values(['Trip Purpose', 'Vehicle Type', 'Year'])
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_16(db_path):
+    name = 'A1.3.16'
+    comment = 'Proportion of bus trips by car ownership, trip purpose and concessionary travel pass status'
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, engine='openpyxl')
+    headers = ['HH car ownership', 'Trip Purpose', 'Concessionary pass status', 'London Boroughs', 'Metropolitan built-up areas', 'Large and medium urban areas', 'Small urban and rural (<10k popn)', 'All areas (exc London)', 'All areas (inc London)']
+    df.columns = headers
+    df = df.melt(id_vars = ['HH car ownership', 'Trip Purpose', 'Concessionary pass status'], var_name = 'Area', value_name='Value')
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_17(db_path):
+    name = 'A1.3.17'
+    comment = 'Proportion of bus trips by that would “not go” if bus not available'
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, engine='openpyxl')
+    headers = ['HH car ownership', 'Trip Purpose', 'Concessionary pass status', 'Proportion not go']
+    df.columns = headers
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_18(db_path):
+    name = 'A1.3.18'
+    comment = 'Value of the social impact per return bus trip'
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, engine='openpyxl')
+    headers = ['Concessionary travel pass status', 'Value']
+    df.columns = headers
+    #! Check currency values here
+    create_fill_udt(df, f'{name}', comment)
+
 if __name__ == '__main__':
     app = wx.App()
     wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
@@ -403,5 +440,9 @@ if __name__ == '__main__':
     #a1_3_12(db_path)
     #a1_3_13(db_path)
     #a1_3_14(db_path)
+    #a1_3_15(db_path)
+    a1_3_16(db_path)
+    a1_3_17(db_path)
+    a1_3_18(db_path)
 
     print(db_path)
