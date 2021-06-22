@@ -350,11 +350,38 @@ def a1_3_12(db_path):
     df.columns = ['Year' if 'Year' in col[2] else ';'.join(col).strip() for col in df.columns.values]
     df.fillna(0, inplace=True)
     df = df.melt(id_vars='Year', var_name='Variables', value_name='Value')
-    df[['Vehicle Type', 'Fuel Type', 'Parameter',]] = df['Variables'].str.split(';', expand=True)
+    df[['Vehicle Type', 'Fuel Type', 'Parameter']] = df['Variables'].str.split(';', expand=True)
     df['Parameter'] = 'Param_'+df.Parameter
     df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
-    df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Year'])
+    df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
     df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_13(db_path):
+    name = 'A1.3.13'
+    comment = 'Fuel cost parameters - Non-Work'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=80, skiprows=23, header=[0, 1, 2], engine='openpyxl')
+    df.drop([('Unnamed: 0_level_0', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('Unnamed: 2_level_0', 'Unnamed: 2_level_1', 'Year')], axis=1, inplace=True)
+    df.columns = ['Year' if 'Year' in col[2] else ';'.join(col).strip() for col in df.columns.values]
+    df.fillna(0, inplace=True)
+    df = df.melt(id_vars='Year', var_name='Variables', value_name='Value')
+    df[['Vehicle Type', 'Fuel Type', 'Parameter']] = df['Variables'].str.split(';', expand=True)
+    df['Parameter'] = 'Param_'+df.Parameter
+    df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
+    df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
+    df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_14(db_path):
+    name = 'A1.3.14'
+    comment = 'Non-fuel resource vehicle operating costs'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=13, skiprows=24, header=[0, 1], engine='openpyxl', index_col=[0,1]).reset_index()
+    df.dropna(axis=1, inplace=True)
+    headers = ['Vehicle Type', 'Fuel Type', 'Param_a1', 'Param_b1']
+    df.columns = headers
+    df[['Trip Purpose', 'Fuel Type']] = df['Fuel Type'].str.split(' ', expand=True).fillna('All')
+    df['Fuel Type'] = df['Fuel Type'].str.replace('Electic', 'Electric')
+    df = df[['Vehicle Type', 'Trip Purpose', 'Fuel Type', 'Param_a1', 'Param_b1']]
     create_fill_udt(df, f'{name}', comment)
 
 if __name__ == '__main__':
@@ -373,6 +400,8 @@ if __name__ == '__main__':
     #a1_3_9(db_path)
     #a1_3_10(db_path)
     #a1_3_11(db_path)
-    a1_3_12(db_path)
+    #a1_3_12(db_path)
+    #a1_3_13(db_path)
+    #a1_3_14(db_path)
 
     print(db_path)
