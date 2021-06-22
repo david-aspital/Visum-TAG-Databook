@@ -60,7 +60,10 @@ def create_fill_udt(df, name, comment):
                 typ = 5
             else:
                 raise ValueError
-            udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ)
+            if typ == 'float64':
+                udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4)
+            else:
+                udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ)
         udt.TableEntries.SetMultiAttValues(uda_id, tuple(zip(range(1, len(df)+1), df[col].tolist())))
 
 
@@ -291,15 +294,68 @@ def a1_3_8(db_path):
     comment = 'Fuel consumption parameter values'
     df = pd.read_excel(db_path, sheet_name=name, nrows=7, skiprows=24, header=[0, 1], engine='openpyxl')
     df.dropna(axis=1, inplace=True)
-    df.columns = ['Vehicle Category' if 'Vehicle' in col else ','.join(col).strip() for col in df.columns.values]
+    df.columns = ['Vehicle Category' if 'Vehicle' in col[1] else ' '.join(col).strip() for col in df.columns.values]
+    df.columns = ['Max speed kph' if 'Max speed' in col else col for col in df.columns.values]
     df2 = pd.read_excel(db_path, sheet_name=name, nrows=4, skiprows=35, header=None,  names=df.columns.values.tolist(), engine='openpyxl', usecols='A,D:I')
     df2.fillna(0, inplace=True)
     df3 = df.append(df2, ignore_index=True)
-    #! Change first col to vehicle type, tidy up column names
+    df3.rename({'Parameters a':'Param_a', 'Parameters b':'Param_b', 'Parameters c':'Param_c', 'Parameters d':'Param_d'}, axis=1, inplace=True)
     create_fill_udt(df3, f'{name}', comment)
 
+def a1_3_9(db_path):
+    name = 'A1.3.9'
+    comment = 'Proportion of cars, LGV & other vehicle kilometres using petrol, diesel or electricity'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=47, skiprows=23, header=[0, 1], engine='openpyxl')
+    df.dropna(axis=1, inplace=True)
+    df.columns = ['Year' if 'Year' in col[1] else ','.join(col).strip() for col in df.columns.values]
+    df = df.melt(id_vars='Year', var_name='Variables', value_name='Value')
+    df[['Mode', 'Fuel Type',]] = df['Variables'].str.split(',', expand=True)
+    df = df[['Year', 'Mode', 'Fuel Type', 'Value']]
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_10(db_path):
+    name = 'A1.3.10'
+    comment = 'Forecast fuel efficiency improvements'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=44, skiprows=24, header=[0, 1, 2], engine='openpyxl')
+    df.dropna(axis=1, inplace=True)
+    df.columns = ['ToYear' if 'Year' in col[2] else 'FromYear' if 'From' in col[2] else ';'.join(col).strip() for col in df.columns.values]
+    df = df.loc[:,~df.columns.duplicated()]
+    df = df.melt(id_vars=['FromYear', 'ToYear'], var_name='Variables', value_name='Value')
+    df[['Change', 'Mode', 'Fuel Type',]] = df['Variables'].str.split(';', expand=True)
+    df['Change'] = np.where(df.Change.str.contains('Cumulative'), 'Cumulative', 'Annual')
+    df['FromYear'] = df.FromYear.str.replace(' to', '').astype(int)
+    df = df[['FromYear', 'ToYear', 'Change', 'Mode', 'Fuel Type', 'Value']]
+    create_fill_udt(df, f'{name}', comment)
+
+def a1_3_11(db_path):
+    name = 'A1.3.11'
+    comment = 'Forecast fuel consumption parameters'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=80, skiprows=23, header=[0, 1], engine='openpyxl')
+    df.drop([('Unnamed: 0_level_0', 'Unnamed: 0_level_1'), ('Vehicle Category', 'Year.1')], axis=1, inplace=True)
+    df.columns = ['Year' if 'Year' in col[1] else ';'.join(col).strip() for col in df.columns.values]
+    df.fillna(0, inplace=True)
+    df = df.melt(id_vars='Year', var_name='Variables', value_name='Value')
+    df[['Vehicle Type', 'Parameter',]] = df['Variables'].str.split(';', expand=True)
+    df['Parameter'] = 'Param_'+df.Parameter
+    df['Vehicle Type'] = df['Vehicle Type'].str.replace('Car1', 'Car')
+    df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Year'])
+    create_fill_udt(df, f'{name}', comment)
 
 
+def a1_3_12(db_path):
+    name = 'A1.3.12'
+    comment = 'Forecast fuel cost parameters - Work'
+    df = pd.read_excel(db_path, sheet_name=name, nrows=80, skiprows=23, header=[0, 1, 2], engine='openpyxl')
+    df.drop([('Unnamed: 0_level_0', 'Unnamed: 0_level_1', 'Unnamed: 0_level_2'), ('Unnamed: 2_level_0', 'Unnamed: 2_level_1', 'Year')], axis=1, inplace=True)
+    df.columns = ['Year' if 'Year' in col[2] else ';'.join(col).strip() for col in df.columns.values]
+    df.fillna(0, inplace=True)
+    df = df.melt(id_vars='Year', var_name='Variables', value_name='Value')
+    df[['Vehicle Type', 'Fuel Type', 'Parameter',]] = df['Variables'].str.split(';', expand=True)
+    df['Parameter'] = 'Param_'+df.Parameter
+    df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
+    df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Year'])
+    df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
+    create_fill_udt(df, f'{name}', comment)
 
 if __name__ == '__main__':
     app = wx.App()
@@ -313,6 +369,10 @@ if __name__ == '__main__':
     #a1_3_5(db_path)
     #a1_3_6(db_path)
     #a1_3_7(db_path)
-    a1_3_8(db_path)
+    #a1_3_8(db_path)
+    #a1_3_9(db_path)
+    #a1_3_10(db_path)
+    #a1_3_11(db_path)
+    a1_3_12(db_path)
 
     print(db_path)
