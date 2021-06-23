@@ -5,6 +5,7 @@ import wx
 import datetime
 import pandas as pd
 import numpy as np
+import traceback
 
 
 
@@ -12,7 +13,7 @@ def create_attributes(db_path):
 
     # Attributes to be added or updated
     atts = {'DB_IMPORT_DATETIME' : datetime.datetime.now().strftime(r'%d-%m-%Y_%H-%M-%S'),
-            'DB_USER' : os.getusername(),
+            'DB_USER' : os.getlogin(),
             'DB_PATH' : db_path,
             'DB_VERSION' : pd.read_excel(db_path, sheet_name='Cover', skiprows=2, columns='A')['TAG Data Book'][0]
             }
@@ -425,27 +426,53 @@ if __name__ == '__main__':
     app = wx.App()
     wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
     db_path = file_select_dlg("Please select TAG Databook file...", wildcard)
-    a1_1_1(db_path)
-    a_1_3_1(db_path)
-    a1_3_2(db_path)
-    a1_3_3(db_path)
-    a1_3_4(db_path)
-    a1_3_5(db_path)
-    a1_3_6(db_path)
-    a1_3_7(db_path)
-    a1_3_8(db_path)
-    a1_3_9(db_path)
-    a1_3_10(db_path)
-    a1_3_11(db_path)
-    a1_3_12(db_path)
-    a1_3_13(db_path)
-    a1_3_14(db_path)
-    a1_3_15(db_path)
-    a1_3_16(db_path)
-    a1_3_17(db_path)
-    a1_3_18(db_path)
+    num_tables = 19
 
-    print(db_path)
+    try:
+        progress_dlg = wx.ProgressDialog("Importing Tables", "Importing tables from databook...", num_tables+1, style=wx.PD_APP_MODAL | wx.PD_SMOOTH | wx.PD_AUTO_HIDE)
+        create_attributes(db_path)
+        progress_dlg.Update(1, "Importing Table A1.1.1...")
+        a1_1_1(db_path)
+        progress_dlg.Update(2, "Importing Table A1.3.1...")
+        a_1_3_1(db_path)
+        progress_dlg.Update(3, "Importing Table A1.3.2...")
+        a1_3_2(db_path)
+        progress_dlg.Update(4, "Importing Table A1.3.3...")
+        a1_3_3(db_path)
+        progress_dlg.Update(5, "Importing Table A1.3.4...")
+        a1_3_4(db_path)
+        progress_dlg.Update(6, "Importing Table A1.3.5...")
+        a1_3_5(db_path)
+        progress_dlg.Update(7, "Importing Table A1.3.6...")
+        a1_3_6(db_path)
+        progress_dlg.Update(8, "Importing Table A1.3.7...")
+        a1_3_7(db_path)
+        progress_dlg.Update(9, "Importing Table A1.3.8...")
+        a1_3_8(db_path)
+        progress_dlg.Update(10, "Importing Table A1.3.9...")
+        a1_3_9(db_path)
+        progress_dlg.Update(11, "Importing Table A1.3.10...")
+        a1_3_10(db_path)
+        progress_dlg.Update(12, "Importing Table A1.3.11...")
+        a1_3_11(db_path)
+        progress_dlg.Update(13, "Importing Table A1.3.12...")
+        a1_3_12(db_path)
+        progress_dlg.Update(14, "Importing Table A1.3.13...")
+        a1_3_13(db_path)
+        progress_dlg.Update(15, "Importing Table A1.3.14...")
+        a1_3_14(db_path)
+        progress_dlg.Update(16, "Importing Table A1.3.15...")
+        a1_3_15(db_path)
+        progress_dlg.Update(17, "Importing Table A1.3.16...")
+        a1_3_16(db_path)
+        progress_dlg.Update(18, "Importing Table A1.3.17...")
+        a1_3_17(db_path)
+        progress_dlg.Update(19, "Importing Table A1.3.18...")
+        a1_3_18(db_path)
+        progress_dlg.Update(20)
+        wx.MessageBox("Databook tables have been imported successfully.", "Import Complete", wx.OK | wx.ICON_INFORMATION)
+    except:
+        Visum.Log(20480, traceback.format_exc())
+        progress_dlg.Destroy()
+        wx.MessageBox("Error while importing data.\nPlease check the Visum log files for more information.", "Error", wx.OK | wx.ICON_ERROR)
 
-    #TODO: Add attributes from function above
-    #TODO: Progress dialog and success dialog
