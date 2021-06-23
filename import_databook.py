@@ -446,3 +446,6 @@ if __name__ == '__main__':
     a1_3_18(db_path)
 
     print(db_path)
+
+    #TODO: Add attributes from function above
+    #TODO: Progress dialog and success dialog
