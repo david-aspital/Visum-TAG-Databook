@@ -52,14 +52,14 @@ def create_fill_udt(df, name, comment):
         uda_id = col.replace(" ", "_")
         if not exists:
             typ = dtypes[col]
-            if typ == 'int':
+            if typ == 'int' or typ == 'int64':
                 typ = 1
             elif typ == 'float64':
                 typ = 2
             elif typ == 'O':
                 typ = 5
             else:
-                raise ValueError
+                raise ValueError(f'Unsupported type: {typ}')
             if typ == 'float64':
                 udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4)
             else:
@@ -69,7 +69,7 @@ def create_fill_udt(df, name, comment):
 
 def a1_1_1(db_path):
     name = 'A1.1.1'
-    comment = 'Table A 1.1.1:  Green Book Discount Rates'
+    comment = 'Green Book Discount Rates'
     df = pd.read_excel(db_path, sheet_name=name, skiprows=23, engine='openpyxl', usecols='B,D').dropna()
     df['Years from current year'] = df['Unnamed: 1']
     df = df[['Years from current year', 'Discount rate']]
@@ -83,36 +83,30 @@ def a1_1_1(db_path):
 
 def a_1_3_1(db_path):
     name = 'A1.3.1'
-    comment = "Table A 1.3.1: Values of Working (Employers' Business) Time by Mode (£ per hour)"
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=23, usecols='A:F', skipfooter=19, header=1, engine='openpyxl')
-    df.drop(0, inplace=True)
-    df.rename({'Factor':'Factor Cost', 'Perceived':'Perceived Cost', 'Market':'Market Price'}, axis=1, inplace=True)
-    df = df[['Mode', 'Factor Cost', 'Perceived Cost', 'Market Price']]
+    comment = "Values of Working (Employers' Business) Time by Mode (£ per hour)"
+    names = ['Mode', 'Factor Cost', 'Perceived Cost', 'Market Price']
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='A,D:F', nrows=14, header=None, names=names, engine='openpyxl')
     create_fill_udt(df, f'{name}a', comment)
 
     comment = 'Values of Non-Working Time by Trip Purpose (£ per hour)' 
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=41, usecols='A:F', skipfooter=13, header=1, engine='openpyxl')
-    df.drop(0, inplace=True)
-    df.rename({'Factor':'Factor Cost', 'Perceived':'Perceived Cost', 'Market':'Market Price'}, axis=1, inplace=True)
-    df = df[['Trip Purpose', 'Factor Cost', 'Perceived Cost', 'Market Price']]
+    names = ['Trip Purpose', 'Factor Cost', 'Perceived Cost', 'Market Price']
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=44, usecols='A,D:F', nrows=2, header=None, names=names, engine='openpyxl')
     create_fill_udt(df, f'{name}b', comment)
 
     comment = "Parameter values for employers' business value of time by mode"
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=38, skipfooter=12, usecols='H:J', engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=38, nrows=8, usecols='H:J', engine='openpyxl')
     create_fill_udt(df, f'{name}c', comment)
 
     comment = "Values of Working (Employers' Business) Time by mode per person (distance banded)" 
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=48, usecols='H:K', header=1, engine='openpyxl')
-    df.drop(0, inplace=True)
+    names = ['Mode', 'Resource Cost', 'Perceived Cost', 'Market Price']
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=51, usecols='H:K', header=None, names=names, nrows=8, engine='openpyxl')
     df['Distance Band'] = df['Mode'].str.split(" ").str[-1]
-    df['Mode'] = df['Mode'].str.split(" ").str[:-1]
-    df['Mode'] = [" ".join(map(str, l)) for l in df['Mode']]
+    df['Mode'] = df.apply(lambda x: x['Mode'].replace(" "+x['Distance Band'], ""), axis=1)
     df[['Lower Bound', 'Upper Bound']] = df['Distance Band'].str.split('-', expand=True)
     df['Lower Bound'] = df['Lower Bound'].str.replace('km', '').str.replace('+', '')
     df['Upper Bound'] = df['Upper Bound'].str.replace('km', '')
     df['Upper Bound'].fillna(999999, inplace=True)
     df[['Lower Bound', 'Upper Bound']] = df[['Lower Bound', 'Upper Bound']].astype(int)
-    df.rename({'Resource':'Resource Cost', 'Perceived':'Perceived Cost', 'Market':'Market Price'}, axis=1, inplace=True)
     df = df[['Mode', 'Distance Band', 'Lower Bound', 'Upper Bound', 'Resource Cost', 'Perceived Cost', 'Market Price']]
     create_fill_udt(df, f'{name}d', comment)
 
@@ -126,7 +120,8 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='B, D:Q', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, D:Q', header=None, names=header, engine='openpyxl')
+    df['Year'] = df.Year.astype(int)
     create_fill_udt(df, f'{name}a', comment)
 
     comment = 'Forecast values of time per person - Non-Working - Resource cost values (£ per hour)'
@@ -136,7 +131,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='B, R:S', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, R:S', header=None, names=header, engine='openpyxl')
     create_fill_udt(df, f'{name}b', comment)
 
     comment = 'Forecast values of time per person - Working - Perceived cost values (£ per hour)'
@@ -146,7 +141,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='B, T:AG', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, T:AG', header=None, names=header, engine='openpyxl')
     create_fill_udt(df, f'{name}c', comment)
 
     comment = 'Forecast values of time per person - Non-Working - Perceived cost values (£ per hour)'
@@ -156,7 +151,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='B, AH:AI', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AH:AI', header=None, names=header, engine='openpyxl')
     create_fill_udt(df, f'{name}d', comment)
 
     comment = 'Forecast values of time per person - Working - Market price values (£ per hour)'
@@ -166,7 +161,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='B, AJ:AW', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AJ:AW', header=None, names=header, engine='openpyxl')
     create_fill_udt(df, f'{name}e', comment)
 
     comment = 'Forecast values of time per person - Non-Working - Market price values (£ per hour)'
@@ -176,7 +171,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='B, AX:AY', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AX:AY', header=None, names=header, engine='openpyxl')
     create_fill_udt(df, f'{name}f', comment)
 
 
@@ -207,7 +202,7 @@ def a1_3_3(db_path):
     header[2] = 'Average '+header[2]
     for i in range(3,5):
         header[i] = header[i]+' Average'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=39, usecols='A,B,H:J', nrows=7, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=38, usecols='A,B,H:J', nrows=7, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df = df.melt(id_vars=['Vehicle Type', 'Journey Purpose'], value_vars=['Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per VehKm')
     create_fill_udt(df, f'{name}b', comment)
 
@@ -235,13 +230,13 @@ def a1_3_4(db_path):
     header[6] = 'Average Weekday'
     header[7] = 'Weekend Average'
     header[8] = 'All Week Average'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='A,B,D:J', nrows=7, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=25, usecols='A,B,D:J', nrows=7, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df = df.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Distance Travelled by Vehicles')
-    df2 = pd.read_excel(db_path, sheet_name=name, skiprows=34, usecols='A,B,D:J', nrows=12, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df2 = pd.read_excel(db_path, sheet_name=name, skiprows=33, usecols='A,B,D:J', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df2 = df2.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Distance Travelled by Occupants')
-    df3 = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='A,B,K:Q', nrows=7, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df3 = pd.read_excel(db_path, sheet_name=name, skiprows=25, usecols='A,B,K:Q', nrows=7, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df3 = df3.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Vehicle Trips')
-    df4 = pd.read_excel(db_path, sheet_name=name, skiprows=34, usecols='A,B,K:Q', nrows=12, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df4 = pd.read_excel(db_path, sheet_name=name, skiprows=33, usecols='A,B,K:Q', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df4 = df4.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Person Trips')
     
     df5 = df.merge(df2).merge(df3).merge(df4)
@@ -260,7 +255,7 @@ def a1_3_5(db_path):
     header[6] = 'Average Weekday'
     header[7] = 'Weekend Average'
     header[8] = 'All Week Average'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, usecols='A,B,D:J', nrows=12, header=None, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=25, usecols='A,B,D:J', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df = df.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Market Price Value of Time Per Vehicle')
     df['Mode'] = np.where(df.Mode == 'PSV ', 'PSV (Occupants)', np.where(df.Mode == '(Occupants)', 'PSV (Occupants)', df.Mode))
     create_fill_udt(df, f'{name}', comment)
@@ -268,12 +263,13 @@ def a1_3_5(db_path):
 def a1_3_6(db_path):
     name = 'A1.3.6'
     comment = 'Market Price Values of Time per Vehicle based on distance travelled (£ per hour)'
-    df = pd.read_excel(db_path, sheet_name=name, nrows=80, skiprows=23, header=[0, 1,2,3], engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, nrows=80, skiprows=23, header=[0,1,2,3], engine='openpyxl')
     df.dropna(axis=1, inplace=True)
     df.columns = ['Year' if 'Year' in col else ','.join(col).strip() for col in df.columns.values]
     df = df.melt(id_vars='Year', var_name='Variables', value_name='Market Price Value of Time Per Vehicle')
     df[['Day Type', 'Time Period', 'Mode', 'Journey Purpose']] = df['Variables'].str.split(',', expand=True)
     df = df[['Year', 'Day Type', 'Time Period', 'Mode', 'Journey Purpose', 'Market Price Value of Time Per Vehicle']]
+    df['Time Period'] = np.where(df['Time Period'].str.contains('Unnamed'), 'All', df['Time Period'])
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_7(db_path):
@@ -339,6 +335,7 @@ def a1_3_11(db_path):
     df['Parameter'] = 'Param_'+df.Parameter
     df['Vehicle Type'] = df['Vehicle Type'].str.replace('Car1', 'Car')
     df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Year'])
+    df = df[['Year', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
     create_fill_udt(df, f'{name}', comment)
 
 
@@ -355,6 +352,7 @@ def a1_3_12(db_path):
     df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
     df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
     df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
+    df = df[['Year', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_13(db_path):
@@ -370,15 +368,16 @@ def a1_3_13(db_path):
     df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
     df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
     df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
+    df = df[['Year', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_14(db_path):
     name = 'A1.3.14'
     comment = 'Non-fuel resource vehicle operating costs'
-    df = pd.read_excel(db_path, sheet_name=name, nrows=13, skiprows=24, header=[0, 1], engine='openpyxl', index_col=[0,1]).reset_index()
+    names =  ['Vehicle Type', 'Fuel Type', 'Param_a1', 'Param_b1']
+    df = pd.read_excel(db_path, sheet_name=name, nrows=13, skiprows=25, engine='openpyxl', index_col=[0,1]).reset_index()
     df.dropna(axis=1, inplace=True)
-    headers = ['Vehicle Type', 'Fuel Type', 'Param_a1', 'Param_b1']
-    df.columns = headers
+    df.columns = names
     df[['Trip Purpose', 'Fuel Type']] = df['Fuel Type'].str.split(' ', expand=True).fillna('All')
     df['Fuel Type'] = df['Fuel Type'].str.replace('Electic', 'Electric')
     df = df[['Vehicle Type', 'Trip Purpose', 'Fuel Type', 'Param_a1', 'Param_b1']]
@@ -398,49 +397,50 @@ def a1_3_15(db_path):
 def a1_3_16(db_path):
     name = 'A1.3.16'
     comment = 'Proportion of bus trips by car ownership, trip purpose and concessionary travel pass status'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, usecols='A:I', engine='openpyxl')
     headers = ['HH car ownership', 'Trip Purpose', 'Concessionary pass status', 'London Boroughs', 'Metropolitan built-up areas', 'Large and medium urban areas', 'Small urban and rural (<10k popn)', 'All areas (exc London)', 'All areas (inc London)']
     df.columns = headers
     df = df.melt(id_vars = ['HH car ownership', 'Trip Purpose', 'Concessionary pass status'], var_name = 'Area', value_name='Value')
+    df.dropna(axis=0, inplace=True)
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_17(db_path):
     name = 'A1.3.17'
     comment = 'Proportion of bus trips by that would “not go” if bus not available'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, usecols='A:D', engine='openpyxl')
     headers = ['HH car ownership', 'Trip Purpose', 'Concessionary pass status', 'Proportion not go']
     df.columns = headers
+    df.dropna(axis=0, inplace=True)
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_18(db_path):
     name = 'A1.3.18'
     comment = 'Value of the social impact per return bus trip'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=27, header=None, nrows = 2, usecols='A,D', engine='openpyxl')
     headers = ['Concessionary travel pass status', 'Value']
     df.columns = headers
-    #! Check currency values here
     create_fill_udt(df, f'{name}', comment)
 
 if __name__ == '__main__':
     app = wx.App()
     wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
     db_path = file_select_dlg("Please select TAG Databook file...", wildcard)
-    #a1_1_1(db_path)
-    #a_1_3_1(db_path)
-    #a1_3_2(db_path)
-    #a1_3_3(db_path)
-    #a1_3_4(db_path)
-    #a1_3_5(db_path)
-    #a1_3_6(db_path)
-    #a1_3_7(db_path)
-    #a1_3_8(db_path)
-    #a1_3_9(db_path)
-    #a1_3_10(db_path)
-    #a1_3_11(db_path)
-    #a1_3_12(db_path)
-    #a1_3_13(db_path)
-    #a1_3_14(db_path)
-    #a1_3_15(db_path)
+    a1_1_1(db_path)
+    a_1_3_1(db_path)
+    a1_3_2(db_path)
+    a1_3_3(db_path)
+    a1_3_4(db_path)
+    a1_3_5(db_path)
+    a1_3_6(db_path)
+    a1_3_7(db_path)
+    a1_3_8(db_path)
+    a1_3_9(db_path)
+    a1_3_10(db_path)
+    a1_3_11(db_path)
+    a1_3_12(db_path)
+    a1_3_13(db_path)
+    a1_3_14(db_path)
+    a1_3_15(db_path)
     a1_3_16(db_path)
     a1_3_17(db_path)
     a1_3_18(db_path)
