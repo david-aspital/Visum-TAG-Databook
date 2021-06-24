@@ -1,6 +1,7 @@
 import os
 import sys
-sys.path.append(r"C:\Users\david.aspital\Anaconda3\envs\MLSAT\Lib\site-packages")
+sys.path.append(f"{os.path.dirname(os.path.realpath(__file__))}\\src")
+import openpyxl
 import wx
 import datetime
 import pandas as pd
@@ -8,23 +9,31 @@ import numpy as np
 import traceback
 
 
-
 def create_attributes(db_path):
 
-    # Attributes to be added or updated
-    atts = {'DB_IMPORT_DATETIME' : datetime.datetime.now().strftime(r'%d-%m-%Y_%H-%M-%S'),
-            'DB_USER' : os.getlogin(),
-            'DB_PATH' : db_path,
-            'DB_VERSION' : pd.read_excel(db_path, sheet_name='Cover', skiprows=2, columns='A')['TAG Data Book'][0]
+    # Price, initial forecast and value years
+    years = pd.read_excel(db_path, sheet_name='User Parameters', skiprows=9, usecols='L', engine='openpyxl').dropna(axis=0).reset_index(drop=True)
+    price_year = years.Value[0]
+    initial_year = years.Value[1]
+    value_year = years.Value[2]
+
+    # Attributes to be added or updated and their types
+    atts = {'DB_IMPORT_DATETIME' : (5, datetime.datetime.now().strftime(r'%d-%m-%Y_%H-%M-%S')),
+            'DB_USER' : (5, os.getlogin()),
+            'DB_PATH' : (5, db_path),
+            'DB_VERSION' : (5, pd.read_excel(db_path, sheet_name='Cover', skiprows=2, engine='openpyxl')['TAG Data Book'][0]),
+            'DB_PRICE_YEAR' : (1, price_year), 
+            'DB_INITIAL_FORECAST_YEAR' : (1, initial_year), 
+            'DB_VALUE_YEAR' : (1, value_year)
             }
 
     # Try to add attribute (ignore if already exists), then update value
     for att, value in atts.items():
         try:
-            Visum.Net.AddUserDefinedAttribute(att, att, att, 5)
+            Visum.Net.AddUserDefinedAttribute(att, att, att, value[0])
         except:
             pass
-        Visum.Net.SetAttValue(att, value)
+        Visum.Net.SetAttValue(att, value[1])
 
 
 def file_select_dlg(message, wildcard):

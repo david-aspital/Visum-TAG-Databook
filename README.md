@@ -21,12 +21,12 @@ A Python script is provided in this repository that can be run from inside Visum
 - The date, time and user that imported the data
 - The databook version
 - The filepath of the databook imported
-- The price and value years selected
+- The price, value and initial forecast years selected
 
-### Import_Databook.py
-This is the script that performs the data import into Visum. It can be run by either dragging and dropping the .py file into the Visum window, or by navigating to Scripts > Run script file... and selecting the .py file.
+### import_databook.py
+This is the script that performs the data import into Visum. It can be run by either dragging and dropping the .py file into the Visum window, or by navigating to Scripts > Run script file... and selecting the .py file. It is required that the `src` folder is located in the same folder as this Python script, but the version file and databook file do not necessarily need to be in the same location.
 
-This will open a file selection dialog where the user should select the databook file that they want to import data from. The script will them import the data into the user-defined tables for use in demand and assignment models.
+Running the script will open a file selection dialog where the user should select the databook file that they want to import data from. The script will them import the data into the user-defined tables for use in demand and assignment models.
 
 
 ### Advantages
