@@ -362,7 +362,12 @@ def a1_3_12(db_path):
     df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
     df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
     df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
-    df = df[['Year', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
+    df = df[['Year', 'Vehicle Type', 'Fuel Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
+    df['Vehicle Type'] = np.where(df['Vehicle Type']=='OGV', np.where(df['Fuel Type'].str.contains('OGV1'), 'OGV1', 'OGV2'), df['Vehicle Type'])
+    #TODO replace below with dictionary normalisation
+    df['Vehicle Type'] = np.where(df['Vehicle Type']=='Cars', 'Car', df['Vehicle Type'])
+    df['Fuel Type'] = df.apply(lambda x: x['Fuel Type'].replace(x['Vehicle Type'], ""), axis=1)
+    df['Fuel Type'] = df['Fuel Type'].str.strip()
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_13(db_path):
