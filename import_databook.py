@@ -71,7 +71,7 @@ def create_fill_udt(df, name, comment):
             else:
                 raise ValueError(f'Unsupported type: {typ}')
             if typ == 'float64':
-                udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4)
+                udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4, canBeEmpty=1)
             else:
                 udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ)
         udt.TableEntries.SetMultiAttValues(uda_id, tuple(zip(range(1, len(df)+1), df[col].tolist())))
@@ -249,7 +249,7 @@ def a1_3_4(db_path):
     df4 = pd.read_excel(db_path, sheet_name=name, skiprows=33, usecols='A,B,K:Q', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df4 = df4.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Person Trips')
     
-    df5 = df.merge(df2).merge(df3).merge(df4)
+    df5 = df.merge(df2, how='outer').merge(df3, how='outer').merge(df4, how='outer').fillna('')
     create_fill_udt(df5, f'{name}', comment)
 
 def a1_3_5(db_path):
