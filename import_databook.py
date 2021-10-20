@@ -24,13 +24,16 @@ def create_attributes(db_path):
             'DB_VERSION' : (5, pd.read_excel(db_path, sheet_name='Cover', skiprows=2, engine='openpyxl')['TAG Data Book'][0]),
             'DB_PRICE_YEAR' : (1, price_year), 
             'DB_INITIAL_FORECAST_YEAR' : (1, initial_year), 
-            'DB_VALUE_YEAR' : (1, value_year)
-            }
+            'DB_VALUE_YEAR' : (1, value_year),
+            'INDIRECT_TAX_CORRECTION' : (2, pd.read_excel(db_path, sheet_name='A1.3.1', skiprows=14, engine='openpyxl')['Unnamed: 2'][0])}
 
     # Try to add attribute (ignore if already exists), then update value
     for att, value in atts.items():
         try:
-            Visum.Net.AddUserDefinedAttribute(att, att, att, value[0])
+            if value[0] == 2:
+                Visum.Net.AddUserDefinedAttribute(att, att, att, value[0], 4)
+            else:
+                Visum.Net.AddUserDefinedAttribute(att, att, att, value[0])
         except:
             pass
         Visum.Net.SetAttValue(att, value[1])
