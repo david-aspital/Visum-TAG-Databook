@@ -393,7 +393,8 @@ def a1_3_14(db_path):
     df = pd.read_excel(db_path, sheet_name=name, nrows=13, skiprows=25, engine='openpyxl', index_col=[0,1]).reset_index()
     df.dropna(axis=1, inplace=True)
     df.columns = names
-    df[['Trip Purpose', 'Fuel Type']] = df['Fuel Type'].str.split(' ', expand=True).fillna('All')
+    df[['Trip Purpose', 'Fuel Type']] = df['Fuel Type'].str.split(' ', expand=True)
+    df['Fuel Type'] = df.apply(lambda row: 'Non-electric' if ((pd.isna(row['Fuel Type'])) & (row['Vehicle Type']=='LGV')) else 'All', axis=1)
     df['Fuel Type'] = df['Fuel Type'].str.replace('Electic', 'Electric')
     df = df[['Vehicle Type', 'Trip Purpose', 'Fuel Type', 'Param_a1', 'Param_b1']]
     create_fill_udt(df, f'{name}', comment)
