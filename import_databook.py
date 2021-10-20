@@ -16,6 +16,7 @@ def create_attributes(db_path):
     price_year = years.Value[0]
     initial_year = years.Value[1]
     value_year = years.Value[2]
+    print('Test')
 
     # Attributes to be added or updated and their types
     atts = {'DB_IMPORT_DATETIME' : (5, datetime.datetime.now().strftime(r'%d-%m-%Y_%H-%M-%S')),
