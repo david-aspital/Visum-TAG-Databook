@@ -71,8 +71,9 @@ def create_fill_udt(df, name, comment):
                 typ = 2
             elif typ == 'O':
                 typ = 5
+                df[col] = df[col].astype(str)
                 df[col] = df[col].str.strip()
-                df[col] = df[col].str.title()
+                df[col] = df[col].str.replace(" - ", "-")
             else:
                 raise ValueError(f'Unsupported type: {typ}')
             if typ == 'float64':
@@ -254,7 +255,7 @@ def a1_3_4(db_path):
     df4 = pd.read_excel(db_path, sheet_name=name, skiprows=33, usecols='A,B,K:Q', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df4 = df4.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Person Trips')
     
-    df5 = df.merge(df2, how='outer').merge(df3, how='outer').merge(df4, how='outer').fillna('')
+    df5 = df.merge(df2, how='outer').merge(df3, how='outer').merge(df4, how='outer')
     create_fill_udt(df5, f'{name}', comment)
 
 def a1_3_5(db_path):
@@ -389,6 +390,7 @@ def a1_3_13(db_path):
     df['Fuel Type'] = df['Fuel Type'].str.replace('Car1', 'Car')
     df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
     df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
+    df['Vehicle Type'] = np.where(df['Vehicle Type']=='Cars', 'Car', df['Vehicle Type'])
     df = df[['Year', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
     create_fill_udt(df, f'{name}', comment)
 
@@ -400,7 +402,8 @@ def a1_3_14(db_path):
     df.dropna(axis=1, inplace=True)
     df.columns = names
     df[['Trip Purpose', 'Fuel Type']] = df['Fuel Type'].str.split(' ', expand=True)
-    df['Fuel Type'] = df.apply(lambda row: 'Non-electric' if ((pd.isna(row['Fuel Type'])) & (row['Vehicle Type']=='LGV')) else 'All', axis=1)
+    df['Fuel Type'] = df.apply(lambda row: 'Non-electric' if ((pd.isna(row['Fuel Type'])) & (row['Vehicle Type']=='LGV')) else row['Fuel Type'], axis=1)
+    df['Fuel Type'] = df.apply(lambda row: 'All' if pd.isna(row['Fuel Type']) else row['Fuel Type'], axis=1)
     df['Fuel Type'] = df['Fuel Type'].str.replace('Electic', 'Electric')
     df = df[['Vehicle Type', 'Trip Purpose', 'Fuel Type', 'Param_a1', 'Param_b1']]
     create_fill_udt(df, f'{name}', comment)
