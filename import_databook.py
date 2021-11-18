@@ -71,6 +71,8 @@ def create_fill_udt(df, name, comment):
                 typ = 2
             elif typ == 'O':
                 typ = 5
+                df[col] = df[col].str.strip()
+                df[col] = df[col].str.title()
             else:
                 raise ValueError(f'Unsupported type: {typ}')
             if typ == 'float64':
@@ -271,6 +273,7 @@ def a1_3_5(db_path):
     df = pd.read_excel(db_path, sheet_name=name, skiprows=25, usecols='A,B,D:J', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df = df.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Market Price Value of Time Per Vehicle')
     df['Mode'] = np.where(df.Mode == 'PSV ', 'PSV (Occupants)', np.where(df.Mode == '(Occupants)', 'PSV (Occupants)', df.Mode))
+    df['Journey Purpose'].map(purpose_dict).fillna(df['Journey Purpose'])
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_6(db_path):
@@ -445,6 +448,7 @@ if __name__ == '__main__':
     wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
     db_path = file_select_dlg("Please select TAG Databook file...", wildcard)
     num_tables = 19
+    purpose_dict = {'Work (freight)' : 'Work', 'Working' : 'Work', 'Work ':'Work'}
 
     try:
         progress_dlg = wx.ProgressDialog("Importing Tables", "Importing tables from databook...", num_tables+1, style=wx.PD_APP_MODAL | wx.PD_SMOOTH | wx.PD_AUTO_HIDE)
