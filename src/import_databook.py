@@ -8,6 +8,28 @@ import pandas as pd
 import numpy as np
 import traceback
 
+def vlog(prio, msg):
+    prios = {"Note":20480, "Warning":16384, "Error":12288, "System":24575}
+    Visum.Log(prios[prio], msg)
+
+def get_db_path():
+    if UDA_exists(Visum.Net, 'DB_PATH'):
+        db_path = Visum.Net.AttValue('DB_PATH')
+
+        if not os.path.isfile(db_path):
+            raise FileNotFoundError(f"File not found: {db_path}")
+    else:
+        db_path = file_select_dlg("Please select TAG Databook file...", wildcard)
+    return db_path
+
+def UDA_exists(visum_container, uda_name):
+    # starts from end (UDAs are listed last)
+    uda_exists = False
+    for current_attr in reversed(visum_container.Attributes.GetAll):
+        if str(current_attr.ID).upper() == uda_name.upper():
+            uda_exists = True
+            break
+    return uda_exists
 
 def create_attributes(db_path):
 
@@ -27,15 +49,15 @@ def create_attributes(db_path):
             'DB_VALUE_YEAR' : (1, value_year),
             'INDIRECT_TAX_CORRECTION' : (2, pd.read_excel(db_path, sheet_name='A1.3.1', skiprows=14, engine='openpyxl')['Unnamed: 2'][0])}
 
-    # Try to add attribute (ignore if already exists), then update value
+    # Check whether attribute exists, and create it if not
     for att, value in atts.items():
-        try:
+        if not UDA_exists(Visum.Net, att):
             if value[0] == 2:
                 Visum.Net.AddUserDefinedAttribute(att, att, att, value[0], 4)
             else:
                 Visum.Net.AddUserDefinedAttribute(att, att, att, value[0])
-        except:
-            pass
+        
+        # Set attribute to value
         Visum.Net.SetAttValue(att, value[1])
 
 
@@ -51,18 +73,24 @@ def file_select_dlg(message, wildcard):
 
 def create_fill_udt(df, name, comment):
     # Function to create or update user-defined table in Visum
-    try:
-        udt = Visum.Net.TableDefinitions.ItemByKey(name)
-        exists = True
-    except:
+
+    # Test if table exists already. If it doesn't; create it
+    if Visum.Net.TableDefinitions.GetFilteredSet(f'[NAME]="{name}"').Count == 0:
         exists = False
-    if not exists:
         dtypes = df.dtypes.to_dict()   
         udt = Visum.Net.AddTableDefinition(name)
         udt.SetAttValue('Comment', comment)
         udt.AddMultiTableEntries(list(range(1,len(df)+1)))
+    else:
+        exists = True
+        udt = Visum.Net.TableDefinitions.ItemByKey(name)
+
+
+    # Iterate through columns in dataframe
     for col in df.columns:
         uda_id = col.replace(" ", "_")
+
+        # If table didn't exist, create new UDAs for it
         if not exists:
             typ = dtypes[col]
             if typ == 'int' or typ == 'int64':
@@ -73,6 +101,7 @@ def create_fill_udt(df, name, comment):
                 typ = 5
                 df[col] = df[col].astype(str)
                 df[col] = df[col].str.strip()
+                df[col] = df[col].str.replace("–", "-")
                 df[col] = df[col].str.replace(" - ", "-")
             else:
                 raise ValueError(f'Unsupported type: {typ}')
@@ -80,8 +109,10 @@ def create_fill_udt(df, name, comment):
                 udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4, canBeEmpty=1)
             else:
                 udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ)
+        
+        # Update values for UDAs
         udt.TableEntries.SetMultiAttValues(uda_id, tuple(zip(range(1, len(df)+1), df[col].tolist())))
-
+    vlog("Note", f"Table {name} created successfully")
 
 def a1_1_1(db_path):
     name = 'A1.1.1'
@@ -167,7 +198,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AH:AI', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AH:AI', header=None, names=header, engine='openpyxl').fillna("")
     create_fill_udt(df, f'{name}d', comment)
 
     comment = 'Forecast values of time per person - Working - Market price values (£ per hour)'
@@ -177,7 +208,7 @@ def a1_3_2(db_path):
         header.append(header_cells[col].str.cat(sep = " "))
     header[0] = 'Year'
     header = [x.rstrip() for x in header]
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AJ:AW', header=None, names=header, engine='openpyxl')
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=26, nrows=80, usecols='B, AJ:AW', header=None, names=header, engine='openpyxl').fillna("")
     create_fill_udt(df, f'{name}e', comment)
 
     comment = 'Forecast values of time per person - Non-Working - Market price values (£ per hour)'
@@ -205,6 +236,8 @@ def a1_3_3(db_path):
     df2 = pd.read_excel(db_path, sheet_name=name, skiprows=31, usecols='A,D:J', nrows=4, header=None, names=header, engine='openpyxl')
     df2 = df2.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per Trip')
     df3 = df.merge(df2)
+    jp2auc = {'Work':'CB', 'Commuting':'CC', 'Other':'CO', 'Average Car':'AVG'}
+    df3['AUC'] = df3['Journey Purpose'].map(jp2auc)
     create_fill_udt(df3, f'{name}a', comment)
 
     comment = 'Vehicle occupancies per Vehicle Kilometre Travelled'
@@ -255,7 +288,7 @@ def a1_3_4(db_path):
     df4 = pd.read_excel(db_path, sheet_name=name, skiprows=33, usecols='A,B,K:Q', nrows=12, names=header, engine='openpyxl', index_col=[0,1]).reset_index()
     df4 = df4.melt(id_vars=['Mode','Journey Purpose'], value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Percentage of Person Trips')
     
-    df5 = df.merge(df2, how='outer').merge(df3, how='outer').merge(df4, how='outer')
+    df5 = df.merge(df2, how='outer').merge(df3, how='outer').merge(df4, how='outer').fillna(0)
     create_fill_udt(df5, f'{name}', comment)
 
 def a1_3_5(db_path):
@@ -391,7 +424,7 @@ def a1_3_13(db_path):
     df = df.pivot_table(values='Value', index=['Year', 'Vehicle Type', 'Fuel Type'], columns='Parameter').reset_index().sort_values(['Vehicle Type', 'Fuel Type', 'Year'])
     df.drop('Param_d.1', axis=1, inplace=True, errors='ignore')
     df['Vehicle Type'] = np.where(df['Vehicle Type']=='Cars', 'Car', df['Vehicle Type'])
-    df = df[['Year', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
+    df = df[['Year', 'Fuel Type', 'Vehicle Type', 'Param_a', 'Param_b', 'Param_c', 'Param_d']]
     create_fill_udt(df, f'{name}', comment)
 
 def a1_3_14(db_path):
@@ -446,11 +479,20 @@ def a1_3_18(db_path):
     df.columns = headers
     create_fill_udt(df, f'{name}', comment)
 
-if __name__ == '__main__':
+def main():
+    global app
     app = wx.App()
+    if 'Visum' not in globals():
+        import win32com.client as com
+        global Visum
+        Visum = com.Dispatch("Visum.Visum.230")
+    
+    global wildcard
     wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
-    db_path = file_select_dlg("Please select TAG Databook file...", wildcard)
+    
+    db_path = get_db_path()
     num_tables = 19
+    global purpose_dict
     purpose_dict = {'Work (freight)' : 'Work', 'Working' : 'Work', 'Work ':'Work'}
 
     try:
@@ -495,9 +537,12 @@ if __name__ == '__main__':
         progress_dlg.Update(19, "Importing Table A1.3.18...")
         a1_3_18(db_path)
         progress_dlg.Update(20)
-        wx.MessageBox("Databook tables have been imported successfully.", "Import Complete", wx.OK | wx.ICON_INFORMATION)
+        vlog("Note", 'Databook tables imported successfully.')
     except:
-        Visum.Log(20480, traceback.format_exc())
+        vlog("Error", traceback.format_exc())
         progress_dlg.Destroy()
         wx.MessageBox("Error while importing data.\nPlease check the Visum log files for more information.", "Error", wx.OK | wx.ICON_ERROR)
 
+
+if __name__ == '__main__':
+    main()
