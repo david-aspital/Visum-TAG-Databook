@@ -615,7 +615,7 @@ def Perceived_VOT_final():
 
 def Perceived_VOC_int():
     name = 'Perceived_VOC_int'
-    comment = 'PLACEHOLDER'
+    comment = 'Interim Vehicle Operating Costs'
 
     VT_JP = [['CB', 'Car', 'Work', 'All', 65],
              ['CC', 'Car', 'Non-Work', 'All', 54],
@@ -682,7 +682,7 @@ def Perceived_VOC_int():
 
 def Perceived_VOC_final():
     name = 'Perceived_VOC_final'
-    comment = 'PLACEHOLDER'
+    comment = 'Final Vehicle Operating Costs'
 
     VT_JP = [['CB', 'Car', 'Work'],
              ['CC', 'Car', 'Non-Work'],
@@ -724,7 +724,7 @@ def Perceived_VOC_final():
     
 def UDAs_for_Impedance():
     name = 'UDAs_for_Impedance'
-    comment = 'PLACEHOLDER'
+    comment = 'Values used in the assignment for impedance'
     
     AUC = ['CB', 'CC', 'CO', 'LGV', 'HGV']
     TERM = ['DIST', 'TIME', 'TOLL']
@@ -785,12 +785,13 @@ def main():
         import win32com.client as com
         global Visum
         Visum = com.Dispatch("Visum.Visum.230")
-        Visum.Net.ActPairs.AddUserDefinedAttribute('AUC', 'AUC', 'AUC', 5)
+        
     
     db_path = get_db_path()
     num_tables = 19
 
-    check_attribute(Visum.Net.ActPairs, 'AUC', "Please ensure there is an attribute for Activity Pairs with ID AUC.")
+    if not UDA_exists(Visum.Net.ActPairs, 'AUC'):
+        Visum.Net.ActPairs.AddUserDefinedAttribute('AUC', 'AUC', 'AUC', 5)
     
     try:
         progress_dlg = wx.ProgressDialog("Importing Tables", "Importing tables from databook...", num_tables+1, style=wx.PD_APP_MODAL | wx.PD_SMOOTH | wx.PD_AUTO_HIDE)
