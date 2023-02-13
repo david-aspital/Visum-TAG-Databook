@@ -79,41 +79,36 @@ def file_select_dlg(message, wildcard):
 def create_fill_udt(df, name, comment):
     # Function to create or update user-defined table in Visum
 
-    # Test if table exists already. If it doesn't; create it
-    if Visum.Net.TableDefinitions.GetFilteredSet(f'[NAME]="{name}"').Count == 0:
-        exists = False
-        dtypes = df.dtypes.to_dict()   
-        udt = Visum.Net.AddTableDefinition(name)
-        udt.SetAttValue('Comment', comment)
-        udt.AddMultiTableEntries(list(range(1,len(df)+1)))
-    else:
-        exists = True
-        udt = Visum.Net.TableDefinitions.ItemByKey(name)
-
+    # Test if table exists already and remove if it does
+    if Visum.Net.TableDefinitions.GetFilteredSet(f'[NAME]="{name}"').Count != 0:
+        Visum.Net.TableDefinitions.GetFilteredSet(f'[NAME]="{name}"').RemoveAll()
+    dtypes = df.dtypes.to_dict()   
+    udt = Visum.Net.AddTableDefinition(name)
+    udt.SetAttValue('Comment', comment)
+    udt.AddMultiTableEntries(list(range(1,len(df)+1)))
 
     # Iterate through columns in dataframe
     for col in df.columns:
-        uda_id = col.replace(" ", "_")
+        uda_id = col.replace(" ", "_").replace(")","").replace("(","")
 
-        # If table didn't exist, create new UDAs for it
-        if not exists:
-            typ = dtypes[col]
-            if typ == 'int' or typ == 'int64':
-                typ = 1
-            elif typ == 'float64':
-                typ = 2
-            elif typ == 'O':
-                typ = 5
-                df[col] = df[col].astype(str)
-                df[col] = df[col].str.strip()
-                df[col] = df[col].str.replace("–", "-")
-                df[col] = df[col].str.replace(" - ", "-")
-            else:
-                raise ValueError(f'Unsupported type: {typ}')
-            if typ == 'float64':
-                udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4, canBeEmpty=1)
-            else:
-                udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ)
+        # Create new UDAs for it
+        typ = dtypes[col]
+        if typ == 'int' or typ == 'int64':
+            typ = 1
+        elif typ == 'float64':
+            typ = 2
+        elif typ == 'O':
+            typ = 5
+            df[col] = df[col].astype(str)
+            df[col] = df[col].str.strip()
+            df[col] = df[col].str.replace("–", "-")
+            df[col] = df[col].str.replace(" - ", "-")
+        else:
+            raise ValueError(f'Unsupported type: {typ}')
+        if typ == 'float64':
+            udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ, 4, canBeEmpty=1)
+        else:
+            udt.TableEntries.AddUserDefinedAttribute(uda_id, col, col, typ)
         
         # Update values for UDAs
         udt.TableEntries.SetMultiAttValues(uda_id, tuple(zip(range(1, len(df)+1), df[col].tolist())))
@@ -122,14 +117,14 @@ def create_fill_udt(df, name, comment):
 def a1_1_1(db_path):
     name = 'A1.1.1'
     comment = 'Green Book Discount Rates'
-    df = pd.read_excel(db_path, sheet_name=name, skiprows=23, engine='openpyxl', usecols='B,D').dropna()
+    df = pd.read_excel(db_path, sheet_name=name, skiprows=23, engine='openpyxl', usecols='B,D,F').dropna()
     df['Years from current year'] = df['Unnamed: 1']
-    df = df[['Years from current year', 'Discount rate']]
+    df = df[['Years from current year', 'Discount rate (standard)', 'Discount rate (health)']]
     df[['Lower Bound', 'Upper Bound']] = df['Years from current year'].str.split('-', expand=True)
     df['Upper Bound'].fillna(999999, inplace=True)
     df['Lower Bound'] = df['Lower Bound'].str.replace(' and over', '')
     df[['Lower Bound', 'Upper Bound']] = df[['Lower Bound', 'Upper Bound']].astype(int)
-    df = df[['Years from current year', 'Lower Bound', 'Upper Bound', 'Discount rate']]
+    df = df[['Years from current year', 'Lower Bound', 'Upper Bound', 'Discount rate (standard)', 'Discount rate (health)']]
     create_fill_udt(df, name, comment)
 
 
@@ -757,7 +752,8 @@ def UDAs_for_Impedance():
         AUC = id[0]
         TERM = id[1]
         IDnm = f'{AUC}_IMP_{TERM}'
-        Visum.Net.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'TableLookup(TABLEENTRIES_UDAs_for_Impedance A, (A[AUC]=\"{AUC}\")&(A[TERM]=\"{TERM}\"), A[Value])')
+        if not UDA_exists(Visum.Net, IDnm):
+            Visum.Net.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'TableLookup(TABLEENTRIES_UDAs_for_Impedance A, (A[AUC]=\"{AUC}\")&(A[TERM]=\"{TERM}\"), A[Value])')
 
 def Activity_Pair_UDAs():
     IDnm = 'OCC'
@@ -789,6 +785,7 @@ def main():
         import win32com.client as com
         global Visum
         Visum = com.Dispatch("Visum.Visum.230")
+        Visum.Net.ActPairs.AddUserDefinedAttribute('AUC', 'AUC', 'AUC', 5)
     
     db_path = get_db_path()
     num_tables = 19
@@ -842,6 +839,7 @@ def main():
         vlog("Error", traceback.format_exc())
         progress_dlg.Destroy()
         wx.MessageBox("Error while importing data.\nPlease check the Visum log files for more information.", "Error", wx.OK | wx.ICON_ERROR)
+        exit(1)
 
     num_tables = 6
 
@@ -866,6 +864,8 @@ def main():
         vlog("Error", traceback.format_exc())
         progress_dlg.Destroy()
         wx.MessageBox("Error while processing data.\nPlease check the Visum log files for more information.", "Error", wx.OK | wx.ICON_ERROR)
+        exit(1)
 
+    del app
 if __name__ == '__main__':
     main()
