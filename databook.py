@@ -516,7 +516,7 @@ def Perceived_VOT_int():
     comment = 'Interim Perceived Value of Time - Goods Vehicle Disaggregated'
     
     # Define time period strings as they appear in the TAG databook tables
-    TP = ['7am – 10am','10am – 4pm','4pm – 7pm','7pm – 7am','Average Weekday','Weekend Average','All Week Average']
+    TP = ['7am-10am','10am-4pm','4pm-7pm','7pm-7am','Average Weekday','Weekend Average','All Week Average']
     
     VT_JP = [['CB', 'Car', 'Work'], 
              ['CC', 'Car', 'Commuting'],
@@ -569,7 +569,7 @@ def Perceived_VOT_final():
              ['HGV', 'HGV', 'Working']]
     
     # Define time period strings as they appear in the TAG databook tables
-    TP = ['7am - 10am','10am - 4pm','4pm - 7pm','7pm - 7am','Average Weekday','Weekend Average','All Week Average']
+    TP = ['7am-10am','10am-4pm','4pm-7pm','7pm-7am','Average Weekday','Weekend Average','All Week Average']
     
     # Create all possible combinations of VT_JP and TP and add blank rows to table of equal numberthem as table entries
     populate = [[vt_jp[0],vt_jp[1],vt_jp[2], tp] for tp in TP for vt_jp in VT_JP]
