@@ -236,6 +236,7 @@ def a1_3_3(db_path):
     df2 = pd.read_excel(db_path, sheet_name=name, skiprows=31, usecols='A,D:J', nrows=4, header=None, names=header, engine='openpyxl')
     df2 = df2.melt(id_vars='Journey Purpose', value_vars=['7am – 10am', '10am – 4pm', '4pm – 7pm', '7pm – 7am', 'Average Weekday', 'Weekend Average', 'All Week Average'], var_name='Time Period', value_name='Occupancy Per Trip')
     df3 = df.merge(df2)
+    df3['Journey Purpose'] = df3['Journey Purpose'].str.strip()
     jp2auc = {'Work':'CB', 'Commuting':'CC', 'Other':'CO', 'Average Car':'AVG'}
     df3['AUC'] = df3['Journey Purpose'].map(jp2auc)
     create_fill_udt(df3, f'{name}a', comment)
