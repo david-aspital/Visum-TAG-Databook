@@ -2,7 +2,7 @@
 
 ## Summary
 
-Example model and Python script to add tables from the TAG databook into PTV Visum as User-Defined Tables. The example model uses the January 2023 version of the databook (v1.20.2) with default Price and Value years (2010). 
+Example model and Python script to add tables from the TAG databook into PTV Visum as User-Defined Tables. The example model uses the November 2023 version of the databook (v1.22) with default Price and Value years (2010). 
 Further tables are created to generate the parameters required for highway assignment and demand models.
 
 ## Example File
