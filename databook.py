@@ -345,7 +345,7 @@ def a1_3_8(db_path):
     df.columns = ['Max speed kph' if 'Max speed' in col else col for col in df.columns.values]
     df2 = pd.read_excel(db_path, sheet_name=name, nrows=4, skiprows=35, header=None,  names=df.columns.values.tolist(), engine='openpyxl', usecols='A,D:I')
     df2.fillna(0, inplace=True)
-    df3 = df.append(df2, ignore_index=True)
+    df3 = pd.concat([df,df2], ignore_index=True)
     df3.rename({'Parameters a':'Param_a', 'Parameters b':'Param_b', 'Parameters c':'Param_c', 'Parameters d':'Param_d'}, axis=1, inplace=True)
     create_fill_udt(df3, f'{name}', comment)
 
@@ -556,7 +556,7 @@ def Perceived_VOT_int():
     ITCD = f'If([Journey_Purpose]=\"Work\", [NETWORK\INDIRECT_TAX_CORRECTION], 1)'
     
     # Create a formula attribute to lookup from WebTAG table A1.3.5
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'TableLookup(TABLEENTRIES_A1_3_5 A, {Condition}, A[Market_Price_{IDnm}]/{ITCD})')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'TableLookup(TABLEENTRIES_A1_3_5 A, {Condition}, A[Market_Price_{IDnm}]/{ITCD})')
 
 # Weighted Averages by DSeg for Perceived Value of Time
 def Perceived_VOT_final():
@@ -608,11 +608,11 @@ def Perceived_VOT_final():
     not_GV = f'TableLookup(TABLEENTRIES_Perceived_VOT_int A, (A[AUC]=[AUC])&(A[Time_Period]=[Time_Period]), A[{IDnm}])'
     
     #Use the above Visum formula language strings to construct the new formula UDA
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'If([AUC]=\"LGV\", {LGV_work}+{LGV_non_work}, If([AUC]=\"HGV\", [NETWORK\HGV_VOT_FACTOR]*({OGV1}+{OGV2}), {not_GV}))')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'If([AUC]=\"LGV\", {LGV_work}+{LGV_non_work}, If([AUC]=\"HGV\", [NETWORK\HGV_VOT_FACTOR]*({OGV1}+{OGV2}), {not_GV}))')
     
     # Create a new formula UDA
     IDnm = 'VOT_pence_per_sec'    
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = '[Value_of_Time_Per_Vehicle]/36')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = '[Value_of_Time_Per_Vehicle]/36')
 
 def Perceived_VOC_int():
     name = 'Perceived_VOC_int'
@@ -648,38 +648,38 @@ def Perceived_VOC_int():
     VehKmTravPrT = f'TableLookup(PRTASSIGNMENTQUALITY V, (V[Iteration]=[Network\\NO_OF_ITER_FOR_CONV])&({DSegSetCode}=[AUC]), V[VehKmTravPrT])'
     VehHourTravtCur = f'TableLookup(PRTASSIGNMENTQUALITY V,(V[Iteration]=[Network\\NO_OF_ITER_FOR_CONV])&({DSegSetCode}=[AUC]), V[VehHourTravtCur])'
     Calc_Avg_Net_Speed_kph = f'{VehKmTravPrT}/{VehHourTravtCur}' #CHECK UNITS
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'If([Network\OVERRIDE_AVG_NET_SPEED], [Override_Avg_Net_Speed_kph], {Calc_Avg_Net_Speed_kph})')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'If([Network\OVERRIDE_AVG_NET_SPEED], [Override_Avg_Net_Speed_kph], {Calc_Avg_Net_Speed_kph})')
     
     IDnm = ['Param_a', 'Param_b', 'Param_c', 'Param_d']
     for i, id in enumerate(IDnm):
         A1_3_12 = f'TableLookup(TABLEENTRIES_A1_3_12 A,(A[Year]=[NETWORK\MODEL_YEAR])&(A[Vehicle_Type]=[Vehicle_Type])&(A[Fuel_Type]=\"Average\"), A[{id}])'
         A1_3_13 = f'TableLookup(TABLEENTRIES_A1_3_13 A,(A[Year]=[NETWORK\MODEL_YEAR])&(A[Vehicle_Type]=[Vehicle_Type]), A[{id}])'
 
-        udt.TableEntries.AddUserDefinedAttribute(id, id, id, 2, formula = f'If([Trip_Purpose]=\"Work\", {A1_3_12}, {A1_3_13})')
+        udt.TableEntries.AddUserDefinedAttribute(id, id, id, 2, Formula = f'If([Trip_Purpose]=\"Work\", {A1_3_12}, {A1_3_13})')
         ModeLookup = f'IF([CODE]="CB"|[CODE]="CC"|[CODE]="CO",TableLookup(TABLEENTRIES_PERCEIVED_VOC_INT A, A[AUC]=[CODE], A[{id}]),0/0)'
         if UDA_exists(Visum.Net.Modes, id):
             Visum.Net.Modes.DeleteUserDefinedAttribute(id)
         
-        Visum.Net.Modes.AddUserDefinedAttribute(id, id, id, 2, formula = ModeLookup)
+        Visum.Net.Modes.AddUserDefinedAttribute(id, id, id, 2, Formula = ModeLookup)
 
     IDnm = 'VOC_f'
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'[PARAM_A]/[Used_Avg_Speed]+[PARAM_B]+[PARAM_C]*[Used_Avg_Speed]+[PARAM_D]*POW([Used_Avg_Speed],2)')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'[PARAM_A]/[Used_Avg_Speed]+[PARAM_B]+[PARAM_C]*[Used_Avg_Speed]+[PARAM_D]*POW([Used_Avg_Speed],2)')
     
     IDnm = ['Param_a1', 'Param_b1']
     for i, id in enumerate(IDnm):
         A1_3_14 = f'TableLookup(TABLEENTRIES_A1_3_14 A,((A[Vehicle_Type]=[Vehicle_Type])&(A[Trip_Purpose]=[Trip_Purpose])&A[Fuel_Type]=[Fuel_Type]), A[{id}])'
         A1_3_15 = f'TableLookup(TABLEENTRIES_A1_3_15 A,((A[Vehicle_Type]=[Vehicle_Type])&(A[Trip_Purpose]=[Trip_Purpose])&A[Year]=[NETWORK\MODEL_YEAR]), A[{id}])'
-        udt.TableEntries.AddUserDefinedAttribute(id, id, id, 2, formula = f'If([Trip_Purpose]=\"Non-Work\", 0, If([Vehicle_Type]=\"Car\", {A1_3_15}, {A1_3_14}))')
+        udt.TableEntries.AddUserDefinedAttribute(id, id, id, 2, Formula = f'If([Trip_Purpose]=\"Non-Work\", 0, If([Vehicle_Type]=\"Car\", {A1_3_15}, {A1_3_14}))')
         ModeLookup = f'IF([CODE]="CB"|[CODE]="CC"|[CODE]="CO",TableLookup(TABLEENTRIES_PERCEIVED_VOC_INT A, A[AUC]=[CODE], A[{id}]),0/0)'
         if UDA_exists(Visum.Net.Modes, id):
             Visum.Net.Modes.DeleteUserDefinedAttribute(id)
-        Visum.Net.Modes.AddUserDefinedAttribute(id, id, id, 2, formula = ModeLookup)
+        Visum.Net.Modes.AddUserDefinedAttribute(id, id, id, 2, Formula = ModeLookup)
     
     IDnm = 'VOC_nf'
     if UDA_exists(Visum.Net.Modes, IDnm):
         udt.TableEntries.DeleteUserDefinedAttribute(IDnm)
 
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'[PARAM_A1]+[PARAM_B1]/[Used_Avg_Speed]')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'[PARAM_A1]+[PARAM_B1]/[Used_Avg_Speed]')
 
 def Perceived_VOC_final():
     name = 'Perceived_VOC_final'
@@ -715,13 +715,13 @@ def Perceived_VOC_final():
         OGV1 = f'[NETWORK\OGV1_PROPORTION]*TableLookup(TABLEENTRIES_Perceived_VOC_int A, A[Vehicle_Type]=\"OGV1\", A[{id}])'
         OGV2 = f'[NETWORK\OGV2_PROPORTION]*TableLookup(TABLEENTRIES_Perceived_VOC_int A, A[Vehicle_Type]=\"OGV2\", A[{id}])'
         not_GV = f'TableLookup(TABLEENTRIES_Perceived_VOC_int A, A[AUC]=[AUC], A[{id}])'
-        udt.TableEntries.AddUserDefinedAttribute(id, id, id, 2, formula = f'If([AUC]=\"LGV\", {LGV}, If([AUC]=\"HGV\", {OGV1}+{OGV2}, {not_GV}))')
+        udt.TableEntries.AddUserDefinedAttribute(id, id, id, 2, Formula = f'If([AUC]=\"LGV\", {LGV}, If([AUC]=\"HGV\", {OGV1}+{OGV2}, {not_GV}))')
     
     IDnm = 'VOC'
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = '[VOC_f]+[VOC_nf]')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = '[VOC_f]+[VOC_nf]')
     
     IDnm = 'VOC_pence_per_m'
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = '[VOC]/1000')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = '[VOC]/1000')
     
 def UDAs_for_Impedance():
     name = 'UDAs_for_Impedance'
@@ -748,13 +748,13 @@ def UDAs_for_Impedance():
     DIST = 'TableLookup(TABLEENTRIES_Perceived_VOC_final A, A[AUC]=[AUC], A[VOC_pence_per_m])/TableLookup(TABLEENTRIES_Perceived_VOT_final A, (A[AUC]=[AUC])&(A[Time_Period]=[NETWORK\MODEL_TP]), A[VOT_pence_per_sec])'
     TIME = '1'
     TOLL = '1/TableLookup(TABLEENTRIES_Perceived_VOT_final A, (A[AUC]=[AUC])&(A[Time_Period]=[NETWORK\MODEL_TP]), A[VOT_pence_per_sec])'
-    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'If([TERM]=\"DIST\", {DIST}, If([TERM]=\"TIME\", {TIME}, {TOLL}))')
+    udt.TableEntries.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'If([TERM]=\"DIST\", {DIST}, If([TERM]=\"TIME\", {TIME}, {TOLL}))')
     for i, id in enumerate(populate):
         AUC = id[0]
         TERM = id[1]
         IDnm = f'{AUC}_IMP_{TERM}'
         if not UDA_exists(Visum.Net, IDnm):
-            Visum.Net.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = f'TableLookup(TABLEENTRIES_UDAs_for_Impedance A, (A[AUC]=\"{AUC}\")&(A[TERM]=\"{TERM}\"), A[Value])')
+            Visum.Net.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = f'TableLookup(TABLEENTRIES_UDAs_for_Impedance A, (A[AUC]=\"{AUC}\")&(A[TERM]=\"{TERM}\"), A[Value])')
 
 def Activity_Pair_UDAs():
     IDnm = 'OCC'
@@ -762,7 +762,7 @@ def Activity_Pair_UDAs():
     if UDA_exists(Visum.Net.ActPairs, IDnm):
         Visum.Net.ActPairs.DeleteUserDefinedAttribute(IDnm)
 
-    Visum.Net.ActPairs.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = OCC)
+    Visum.Net.ActPairs.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = OCC)
     CB_VoT = 'TableLookup(TABLEENTRIES_A1_3_2C A, (A[Year]=[NETWORK\MODEL_YEAR]), A[Car_driver])'
     CC_VoT = 'TableLookup(TABLEENTRIES_A1_3_2D A, (A[Year]=[NETWORK\MODEL_YEAR]), A[Commuting])'
     CO_VoT = 'TableLookup(TABLEENTRIES_A1_3_2D A, (A[Year]=[NETWORK\MODEL_YEAR]), A[Other])'
@@ -770,7 +770,7 @@ def Activity_Pair_UDAs():
     VOT = f'IF([AUC]=\"CB\", {CB_VoT},IF([AUC]=\"CC\", {CC_VoT}, {CO_VoT}))'
     if UDA_exists(Visum.Net.ActPairs, IDnm):
         Visum.Net.ActPairs.DeleteUserDefinedAttribute(IDnm)
-    Visum.Net.ActPairs.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, formula = VOT)
+    Visum.Net.ActPairs.AddUserDefinedAttribute(IDnm, IDnm, IDnm, 2, Formula = VOT)
 
 A1_3_4_work = f'TableLookup(TABLEENTRIES_A1_3_4 A, (A[Journey_Purpose]=\"Work (freight)\")&(A[Mode]=\"LGV\")&(A[Time_Period]=[NETWORK\MODEL_TP]), A[Percentage_of_Vehicle_Trips])'
 A1_3_4_non_work = f'TableLookup(TABLEENTRIES_A1_3_4 A, (A[Journey_Purpose]=\"Non - Work\")&(A[Mode]=\"LGV\")&(A[Time_Period]=[NETWORK\MODEL_TP]), A[Percentage_of_Vehicle_Trips])'
@@ -785,7 +785,7 @@ def main():
     if 'Visum' not in globals():
         import win32com.client as com
         global Visum
-        Visum = com.Dispatch("Visum.Visum.230")
+        Visum = com.Dispatch("Visum.Visum.240")
         
     
     db_path = get_db_path()
