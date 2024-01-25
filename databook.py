@@ -778,12 +778,14 @@ wildcard = "Excel Files(*.xlsm; *.xlsx)|*.xlsm;*.xlsx|" "All files (*.*)|*.*"
 purpose_dict = {'Work (freight)' : 'Work', 'Working' : 'Work', 'Work ':'Work'}
 
 def main():
-    global app
-    app = wx.App()
-
+    
     # Primarily to be used for debugging
     if 'Visum' not in globals():
         import win32com.client as com
+        
+        global app
+        app = wx.App()
+        
         global Visum
         Visum = com.Dispatch("Visum.Visum.240")
         
