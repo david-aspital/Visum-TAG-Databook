@@ -1,6 +1,7 @@
-# Copyright (c) 2010-2021 openpyxl
+# Copyright (c) 2010-2024 openpyxl
 
 from collections import OrderedDict
+from operator import attrgetter
 
 from openpyxl.descriptors import (
     Typed,
@@ -48,6 +49,7 @@ class ChartBase(Serialisable):
     axId = ValueSequence(expected_type=int)
     visible_cells_only = Bool(allow_none=True)
     display_blanks = Set(values=['span', 'gap', 'zero'])
+    graphical_properties = Typed(expected_type=GraphicalProperties, allow_none=True)
 
     _series_type = ""
     ser = ()
@@ -60,7 +62,7 @@ class ChartBase(Serialisable):
     _path = "/xl/charts/chart{0}.xml"
     style = MinMax(allow_none=True, min=1, max=48)
     mime_type = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
-    graphical_properties = Typed(expected_type=GraphicalProperties, allow_none=True)
+    graphical_properties = Typed(expected_type=GraphicalProperties, allow_none=True) # mapped to chartspace
 
     __elements__ = ()
 
@@ -80,7 +82,8 @@ class ChartBase(Serialisable):
         self.pivotFormats = ()
         self.visible_cells_only = True
         self.idx_base = 0
-        super(ChartBase, self).__init__()
+        self.graphical_properties = None
+        super().__init__()
 
 
     def __hash__(self):
@@ -104,7 +107,19 @@ class ChartBase(Serialisable):
         if self.ser is not None:
             for s in self.ser:
                 s.__elements__ = attribute_mapping[self._series_type]
-        return super(ChartBase, self).to_tree(tagname, idx)
+        return super().to_tree(tagname, idx)
+
+
+    def _reindex(self):
+        """
+        Normalise and rebase series: sort by order and then rebase order
+
+        """
+        # sort data series in order and rebase
+        ds = sorted(self.series, key=attrgetter("order"))
+        for idx, s in enumerate(ds):
+            s.order = idx
+        self.series = ds
 
 
     def _write(self):
@@ -131,6 +146,7 @@ class ChartBase(Serialisable):
         cs.style = self.style
         cs.roundedCorners = self.roundedCorners
         cs.pivotSource = self.pivotSource
+        cs.spPr = self.graphical_properties
         return cs.to_tree()
 
 

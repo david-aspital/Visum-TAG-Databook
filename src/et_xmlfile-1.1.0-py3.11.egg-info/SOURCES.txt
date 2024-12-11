@@ -1,0 +1,10 @@
+MANIFEST.in
+README.rst
+setup.cfg
+setup.py
+et_xmlfile/__init__.py
+et_xmlfile/xmlfile.py
+et_xmlfile.egg-info/PKG-INFO
+et_xmlfile.egg-info/SOURCES.txt
+et_xmlfile.egg-info/dependency_links.txt
+et_xmlfile.egg-info/top_level.txt

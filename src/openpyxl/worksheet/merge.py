@@ -1,4 +1,6 @@
-# Copyright (c) 2010-2021 openpyxl
+# Copyright (c) 2010-2024 openpyxl
+
+import copy
 
 from openpyxl.descriptors.serialisable import Serialisable
 from openpyxl.descriptors import (
@@ -23,7 +25,7 @@ class MergeCell(CellRange):
     def __init__(self,
                  ref=None,
                 ):
-        super(MergeCell, self).__init__(ref)
+        super().__init__(ref)
 
 
     def __copy__(self):
@@ -116,6 +118,19 @@ class MergedCellRange(CellRange):
                     cell = MergedCell(self.ws, row=row, column=col)
                     self.ws._cells[(cell.row, cell.column)] = cell
                 cell.border += border
+
+        protected = self.start_cell.protection is not None
+        if protected:
+            protection = copy.copy(self.start_cell.protection)
+        for coord in self.cells:
+            cell = self.ws._cells.get(coord)
+            if cell is None:
+                row, col = coord
+                cell = MergedCell(self.ws, row=row, column=col)
+                self.ws._cells[(cell.row, cell.column)] = cell
+
+            if protected:
+                cell.protection = protection
 
 
     def __contains__(self, coord):

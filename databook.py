@@ -787,7 +787,7 @@ def main():
         app = wx.App()
         
         global Visum
-        Visum = com.Dispatch("Visum.Visum.240")
+        Visum = com.Dispatch("Visum.Visum.250")
         
     
     db_path = get_db_path()
